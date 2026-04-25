@@ -1,13 +1,36 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { Suspense } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
+import { useEffect, useState } from "react";
 import { createClient } from "@/lib/supabase";
-import { CheckCircle, Package, Truck, Clock, MapPin, Phone, Mail, Calendar, Receipt, Download, Share2 } from "lucide-react";
+import { CheckCircle, Package, Truck, Clock, MapPin, Phone, Mail, Calendar, Receipt, Download, Share2, Loader2 } from "lucide-react";
 import Link from "next/link";
 import { motion } from "framer-motion";
 
+// Main component wrapped in Suspense
 export default function OrderConfirmationPage() {
+    return (
+        <Suspense fallback={<LoadingFallback />}>
+            <OrderConfirmationContent />
+        </Suspense>
+    );
+}
+
+// Loading fallback component
+function LoadingFallback() {
+    return (
+        <div className="min-h-screen bg-zinc-50 flex items-center justify-center">
+            <div className="text-center">
+                <Loader2 className="animate-spin text-emerald-600 mx-auto mb-4" size={48} />
+                <p className="text-zinc-600">Loading order details...</p>
+            </div>
+        </div>
+    );
+}
+
+// Actual content component
+function OrderConfirmationContent() {
     const searchParams = useSearchParams();
     const router = useRouter();
     const supabase = createClient();
@@ -74,7 +97,7 @@ export default function OrderConfirmationPage() {
 
     const downloadReceipt = () => {
         const receiptContent = `
-AURA PHARMACY - ORDER RECEIPT
+AURA PHARMA - ORDER RECEIPT
 ================================
 Order ID: ${order.id}
 Date: ${new Date(order.created_at).toLocaleString()}
@@ -99,9 +122,9 @@ Subtotal: $${(order.total_amount / 1.1).toFixed(2)}
 Tax (10%): $${(order.total_amount / 11).toFixed(2)}
 Total: $${order.total_amount.toFixed(2)}
 
-Thank you for choosing AURA Pharmacy!
-For support: support@aurapharmacy.com
-        `;
+Thank you for choosing AURA Pharma!
+For support: support@aurapharma.com
+    `;
 
         const blob = new Blob([receiptContent], { type: "text/plain" });
         const url = URL.createObjectURL(blob);
@@ -113,14 +136,7 @@ For support: support@aurapharmacy.com
     };
 
     if (loading) {
-        return (
-            <div className="min-h-screen bg-zinc-50 flex items-center justify-center">
-                <div className="text-center">
-                    <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-brand mx-auto mb-4"></div>
-                    <p className="text-zinc-600">Loading order details...</p>
-                </div>
-            </div>
-        );
+        return <LoadingFallback />;
     }
 
     if (error || !order) {
@@ -133,7 +149,7 @@ For support: support@aurapharmacy.com
                     <h1 className="text-2xl font-bold text-zinc-900 mb-2">Order Not Found</h1>
                     <p className="text-zinc-500 mb-6">{error || "We couldn't find your order details."}</p>
                     <Link href="/pharmacy">
-                        <button className="px-6 py-3 bg-brand text-white rounded-xl font-bold hover:bg-brand/90 transition">
+                        <button className="px-6 py-3 bg-emerald-600 text-white rounded-xl font-bold hover:bg-emerald-700 transition">
                             Continue Shopping
                         </button>
                     </Link>
@@ -206,7 +222,7 @@ For support: support@aurapharmacy.com
                     >
                         <div className="p-6 border-b border-zinc-100 bg-zinc-50/50">
                             <h3 className="font-bold text-lg flex items-center gap-2">
-                                <Receipt size={20} className="text-brand" />
+                                <Receipt size={20} className="text-emerald-600" />
                                 Order Items
                             </h3>
                         </div>
@@ -223,7 +239,7 @@ For support: support@aurapharmacy.com
                                     <div className="flex-1">
                                         <p className="font-bold text-zinc-900">{item.name}</p>
                                         <p className="text-xs text-zinc-500">Quantity: {item.quantity}</p>
-                                        <p className="text-sm font-bold text-brand mt-1">
+                                        <p className="text-sm font-bold text-emerald-600 mt-1">
                                             ${(item.price * item.quantity).toFixed(2)}
                                         </p>
                                     </div>
@@ -243,7 +259,7 @@ For support: support@aurapharmacy.com
                         <div className="bg-white rounded-3xl shadow-sm border border-zinc-100 overflow-hidden">
                             <div className="p-6 border-b border-zinc-100 bg-zinc-50/50">
                                 <h3 className="font-bold text-lg flex items-center gap-2">
-                                    <MapPin size={20} className="text-brand" />
+                                    <MapPin size={20} className="text-emerald-600" />
                                     Shipping Details
                                 </h3>
                             </div>
@@ -270,7 +286,7 @@ For support: support@aurapharmacy.com
                         <div className="bg-white rounded-3xl shadow-sm border border-zinc-100 overflow-hidden">
                             <div className="p-6 border-b border-zinc-100 bg-zinc-50/50">
                                 <h3 className="font-bold text-lg flex items-center gap-2">
-                                    <Receipt size={20} className="text-brand" />
+                                    <Receipt size={20} className="text-emerald-600" />
                                     Payment Summary
                                 </h3>
                             </div>
@@ -290,7 +306,7 @@ For support: support@aurapharmacy.com
                                 <div className="border-t pt-3 mt-3">
                                     <div className="flex justify-between text-lg font-black">
                                         <span className="text-zinc-900">Total</span>
-                                        <span className="text-brand">${order.total_amount.toFixed(2)}</span>
+                                        <span className="text-emerald-600">${order.total_amount.toFixed(2)}</span>
                                     </div>
                                 </div>
                             </div>
@@ -320,57 +336,17 @@ For support: support@aurapharmacy.com
                                 url: window.location.href
                             }).catch(() => { });
                         }}
-                        className="px-6 py-3 border-2 border-zinc-200 rounded-xl font-bold hover:border-brand transition flex items-center gap-2"
+                        className="px-6 py-3 border-2 border-zinc-200 rounded-xl font-bold hover:border-emerald-600 transition flex items-center gap-2"
                     >
                         <Share2 size={18} />
                         Share Order
                     </button>
                     <Link href="/pharmacy">
-                        <button className="px-6 py-3 bg-brand text-white rounded-xl font-bold hover:bg-brand/90 transition">
+                        <button className="px-6 py-3 bg-emerald-600 text-white rounded-xl font-bold hover:bg-emerald-700 transition">
                             Continue Shopping
                         </button>
                     </Link>
                 </motion.div>
-
-                {/* Track Order Section */}
-                {order.status === 'shipped' && (
-                    <motion.div
-                        initial={{ opacity: 0, y: 20 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        transition={{ delay: 0.5 }}
-                        className="mt-8 bg-gradient-to-r from-brand/5 to-transparent rounded-3xl p-6 border border-brand/20"
-                    >
-                        <div className="flex items-center gap-4 flex-wrap justify-between">
-                            <div>
-                                <h3 className="font-bold text-lg flex items-center gap-2">
-                                    <Truck size={20} className="text-brand" />
-                                    Track Your Order
-                                </h3>
-                                <p className="text-sm text-zinc-600 mt-1">
-                                    Your order is on the way! Track it in real-time.
-                                </p>
-                            </div>
-                            <button className="px-6 py-3 bg-brand text-white rounded-xl font-bold hover:bg-brand/90 transition">
-                                Track Package
-                            </button>
-                        </div>
-                    </motion.div>
-                )}
-
-                {/* Estimated Delivery */}
-                {order.status !== 'delivered' && order.status !== 'cancelled' && (
-                    <motion.div
-                        initial={{ opacity: 0 }}
-                        animate={{ opacity: 1 }}
-                        transition={{ delay: 0.6 }}
-                        className="mt-6 text-center"
-                    >
-                        <div className="inline-flex items-center gap-2 text-sm text-zinc-500 bg-white px-4 py-2 rounded-full">
-                            <Clock size={14} />
-                            Estimated delivery: 3-5 business days
-                        </div>
-                    </motion.div>
-                )}
             </div>
         </div>
     );

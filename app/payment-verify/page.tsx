@@ -1,13 +1,33 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { Suspense } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
+import { useEffect, useState } from "react";
 import { createClient } from "@/lib/supabase";
-import { CheckCircle, XCircle, Loader2, Package, ArrowRight } from "lucide-react";
+import { CheckCircle, XCircle, Loader2, ArrowRight } from "lucide-react";
 import Link from "next/link";
 import { motion } from "framer-motion";
 
 export default function PaymentVerifyPage() {
+    return (
+        <Suspense fallback={<PaymentVerifyLoading />}>
+            <PaymentVerifyContent />
+        </Suspense>
+    );
+}
+
+function PaymentVerifyLoading() {
+    return (
+        <div className="min-h-screen bg-zinc-50 flex items-center justify-center">
+            <div className="text-center">
+                <Loader2 className="animate-spin text-emerald-600 mx-auto mb-4" size={48} />
+                <p className="text-zinc-600">Loading...</p>
+            </div>
+        </div>
+    );
+}
+
+function PaymentVerifyContent() {
     const searchParams = useSearchParams();
     const router = useRouter();
     const supabase = createClient();
@@ -29,7 +49,6 @@ export default function PaymentVerifyPage() {
 
     const verifyPayment = async () => {
         try {
-            // Call our verification API
             const response = await fetch("/api/paystack/verify", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
@@ -41,8 +60,6 @@ export default function PaymentVerifyPage() {
             if (data.success) {
                 setSuccess(true);
                 setOrderId(data.orderId);
-
-                // Clear cart after successful payment
                 localStorage.removeItem("cart");
             } else {
                 setError(data.error || "Payment verification failed");
@@ -56,15 +73,7 @@ export default function PaymentVerifyPage() {
     };
 
     if (verifying) {
-        return (
-            <div className="min-h-screen bg-zinc-50 flex items-center justify-center">
-                <div className="text-center">
-                    <Loader2 className="animate-spin text-emerald-600 mx-auto mb-4" size={48} />
-                    <h2 className="text-2xl font-bold text-zinc-900 mb-2">Verifying Payment</h2>
-                    <p className="text-zinc-500">Please wait while we confirm your transaction...</p>
-                </div>
-            </div>
-        );
+        return <PaymentVerifyLoading />;
     }
 
     if (success) {
