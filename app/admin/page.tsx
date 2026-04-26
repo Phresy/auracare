@@ -24,7 +24,8 @@ import {
     Truck,
     CheckCircle2,
     XCircle,
-    RefreshCw
+    RefreshCw,
+    Save
 } from "lucide-react";
 
 export default function AdminPanel() {
@@ -47,6 +48,7 @@ export default function AdminPanel() {
     const [selectedProduct, setSelectedProduct] = useState<any>(null);
     const [selectedOrder, setSelectedOrder] = useState<any>(null);
     const [isSubmitting, setIsSubmitting] = useState(false);
+    const [updatingOrderId, setUpdatingOrderId] = useState<string | null>(null);
 
     // Image upload
     const [imageFile, setImageFile] = useState<File | null>(null);
@@ -155,7 +157,7 @@ export default function AdminPanel() {
     }, [searchTerm, categoryFilter, prescriptionFilter, medications]);
 
     const categories = ["all", ...new Set(medications.map(med => med.category).filter(Boolean))];
-    const statusOptions = ["all", "pending", "verified", "shipped", "delivered", "cancelled"];
+    const statusOptions = ["pending", "verified", "shipped", "delivered", "cancelled"];
 
     const getStatusColor = (status: string) => {
         switch (status) {
@@ -342,17 +344,48 @@ export default function AdminPanel() {
         }
     };
 
-    const updateOrderStatus = async (orderId: string, status: string) => {
-        const { error } = await supabase
-            .from("orders")
-            .update({ status })
-            .eq("id", orderId);
+    // Fixed updateOrderStatus function with better error handling and state management
+    const updateOrderStatus = async (orderId: string, newStatus: string) => {
+        // Set loading state for this specific order
+        setUpdatingOrderId(orderId);
 
-        if (!error) {
+        try {
+            console.log(`Updating order ${orderId} to status: ${newStatus}`);
+
+            const { error } = await supabase
+                .from("orders")
+                .update({
+                    status: newStatus,
+                    updated_at: new Date().toISOString()
+                })
+                .eq("id", orderId);
+
+            if (error) {
+                console.error("Update error:", error);
+                alert(`Error updating order status: ${error.message}`);
+                return;
+            }
+
+            // Update local state immediately for better UX
+            setOrders(prevOrders =>
+                prevOrders.map(order =>
+                    order.id === orderId
+                        ? { ...order, status: newStatus }
+                        : order
+                )
+            );
+
+            console.log(`Order ${orderId} status updated to ${newStatus} successfully`);
+            alert(`Order status updated to ${newStatus.toUpperCase()}!`);
+
+            // Refresh orders from database to ensure consistency
             await fetchOrders();
-            alert(`Order status updated to ${status}`);
-        } else {
-            alert("Error updating order status");
+
+        } catch (error: any) {
+            console.error("Unexpected error:", error);
+            alert(`Failed to update order status: ${error.message}`);
+        } finally {
+            setUpdatingOrderId(null);
         }
     };
 
@@ -530,9 +563,10 @@ export default function AdminPanel() {
                                     onChange={(e) => setOrderStatusFilter(e.target.value)}
                                     className="px-4 py-2 border border-zinc-200 rounded-xl text-sm focus:outline-none focus:border-zinc-900"
                                 >
+                                    <option value="all">All Orders</option>
                                     {statusOptions.map(status => (
                                         <option key={status} value={status}>
-                                            {status === "all" ? "All Orders" : status.charAt(0).toUpperCase() + status.slice(1)}
+                                            {status.charAt(0).toUpperCase() + status.slice(1)}
                                         </option>
                                     ))}
                                 </select>
@@ -601,17 +635,23 @@ export default function AdminPanel() {
                                                     ${order.total_amount?.toFixed(2)}
                                                 </td>
                                                 <td className="p-6">
-                                                    <select
-                                                        onChange={(e) => updateOrderStatus(order.id, e.target.value)}
-                                                        value={order.status}
-                                                        className={`text-xs px-3 py-1.5 rounded-lg font-bold border ${getStatusColor(order.status)}`}
-                                                    >
-                                                        <option value="pending">Pending</option>
-                                                        <option value="verified">Verified</option>
-                                                        <option value="shipped">Shipped</option>
-                                                        <option value="delivered">Delivered</option>
-                                                        <option value="cancelled">Cancelled</option>
-                                                    </select>
+                                                    <div className="flex items-center gap-2">
+                                                        <select
+                                                            value={order.status}
+                                                            onChange={(e) => updateOrderStatus(order.id, e.target.value)}
+                                                            className={`text-xs px-3 py-1.5 rounded-lg font-bold border ${getStatusColor(order.status)}`}
+                                                            disabled={updatingOrderId === order.id}
+                                                        >
+                                                            <option value="pending">Pending</option>
+                                                            <option value="verified">Verified</option>
+                                                            <option value="shipped">Shipped</option>
+                                                            <option value="delivered">Delivered</option>
+                                                            <option value="cancelled">Cancelled</option>
+                                                        </select>
+                                                        {updatingOrderId === order.id && (
+                                                            <Loader2 size={14} className="animate-spin text-zinc-500" />
+                                                        )}
+                                                    </div>
                                                 </td>
                                                 <td className="p-6">
                                                     {order.prescription_url ? (
